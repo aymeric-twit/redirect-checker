@@ -1,0 +1,24 @@
+{
+    "slug": "redirects-checker",
+    "name": "Redirects Checker",
+    "description": "Detecte les chaines, boucles et 404 dans une liste de redirections 301",
+    "version": "1.0.0",
+    "icon": "bi-signpost-split",
+    "entry_point": "index.php",
+    "sort_order": 55,
+    "quota_mode": "form_submit",
+    "default_quota": 100,
+    "display_mode": "embedded",
+    "env_keys": [],
+    "languages": [],
+    "routes": [
+        {"path": "process.php", "method": "POST", "type": "ajax"},
+        {"path": "results.php", "method": "GET", "type": "page"},
+        {"path": "progress.php", "method": "GET", "type": "ajax"},
+        {"path": "download.php", "method": "GET", "type": "ajax"},
+        {"path": "configs.php", "method": "GET", "type": "ajax"},
+        {"path": "configs.php", "method": "POST", "type": "ajax"},
+        {"path": "configs.php", "method": "DELETE", "type": "ajax"},
+        {"path": "historique.php", "method": "GET", "type": "ajax"}
+    ]
+}

@@ -1,0 +1,179 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/boot.php';
+
+set_time_limit(0);
+ini_set('memory_limit', '256M');
+
+$options = getopt('', ['job:']);
+$jobId = $options['job'] ?? null;
+
+if ($jobId === null || !GestionnaireJobs::validerJobId($jobId)) {
+    fwrite(STDERR, "Job ID invalide.\n");
+    exit(1);
+}
+
+$gestionnaire = new GestionnaireJobs();
+$cheminJob = $gestionnaire->cheminJob($jobId);
+
+if (!is_dir($cheminJob)) {
+    fwrite(STDERR, "Repertoire du job introuvable.\n");
+    exit(1);
+}
+
+// Gestion des erreurs fatales
+register_shutdown_function(function () use ($gestionnaire, $jobId): void {
+    $erreur = error_get_last();
+    if ($erreur !== null && in_array($erreur['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        $gestionnaire->ecrireProgression($jobId, [
+            'status' => 'error',
+            'message' => 'Erreur fatale : ' . $erreur['message'],
+            'progress' => 0,
+        ]);
+    }
+});
+
+$analyse = $gestionnaire->lireAnalyse($jobId);
+if ($analyse === null) {
+    $gestionnaire->ecrireProgression($jobId, [
+        'status' => 'error',
+        'message' => 'Impossible de charger l\'analyse.',
+        'progress' => 0,
+    ]);
+    exit(1);
+}
+
+// Lire la configuration du job
+$config = json_decode(file_get_contents($cheminJob . '/config.json'), true) ?? [];
+$domaine = $config['domaine'] ?? '';
+$concurrence = $config['concurrence'] ?? 10;
+$delaiMs = $config['delai_ms'] ?? 0;
+$timeout = $config['timeout'] ?? 5;
+$maxRedirections = $config['max_redirections'] ?? 10;
+$userAgent = $config['user_agent'] ?? 'SalomonBotSEO/1.0';
+$customHeaderNom = $config['custom_header_nom'] ?? '';
+$customHeaderValeur = $config['custom_header_valeur'] ?? '';
+$headersSupplementaires = [];
+if ($customHeaderNom !== '') {
+    $headersSupplementaires[$customHeaderNom] = $customHeaderValeur;
+}
+
+// Prefixer le domaine sur les URLs relatives si un domaine est fourni
+$pairesOrigine = $analyse['paires'];
+$paires = $pairesOrigine;
+if ($domaine !== '') {
+    $analyseur = new AnalyseurRedirections();
+    $paires = $analyseur->prefixerDomaine($pairesOrigine, $domaine);
+}
+
+// Extraire les URLs source uniques a crawler (prefixees)
+// On crawle les SOURCES pour verifier ou elles redirigent reellement
+$urlsSourceUniques = [];
+$mappingSourcePrefixee = []; // URL prefixee -> URL originale
+foreach ($paires as $i => $paire) {
+    $src = $paire['source'];
+    if ((str_starts_with($src, 'http://') || str_starts_with($src, 'https://')) && !isset($urlsSourceUniques[$src])) {
+        $urlsSourceUniques[$src] = true;
+        $mappingSourcePrefixee[$src] = $pairesOrigine[$i]['source'];
+    }
+}
+
+// Mapping destinations : URL originale -> URL prefixee (pour comparaison JS)
+$mappingDestinations = [];
+foreach ($pairesOrigine as $i => $paireOrigine) {
+    $destOrigine = $paireOrigine['destination'];
+    $destPrefixee = $paires[$i]['destination'];
+    if ($destOrigine !== $destPrefixee) {
+        $mappingDestinations[$destOrigine] = $destPrefixee;
+    }
+}
+
+$urlsAVerifier = array_keys($urlsSourceUniques);
+$total = count($urlsAVerifier);
+
+if ($total === 0) {
+    $gestionnaire->ecrireProgression($jobId, [
+        'status' => 'done',
+        'phase' => 'termine',
+        'progress' => 100,
+        'verifiees' => 0,
+        'total' => 0,
+        'message' => 'Aucune URL absolue a verifier.',
+    ]);
+    $gestionnaire->sauvegarderResultats($jobId, ['verificationsHttp' => []]);
+    exit(0);
+}
+
+$gestionnaire->ecrireProgression($jobId, [
+    'status' => 'running',
+    'phase' => 'verification_http',
+    'progress' => 0,
+    'verifiees' => 0,
+    'total' => $total,
+]);
+
+// Fichier de logs temps reel (JSON lines)
+$cheminLogs = $cheminJob . '/logs.jsonl';
+file_put_contents($cheminLogs, '');
+
+// Verification HTTP
+$verificateur = new VerificateurHttp($concurrence, $timeout, $userAgent, $maxRedirections, $delaiMs, $headersSupplementaires);
+
+// Callback logs temps reel : ecrire chaque resultat dans logs.jsonl
+$verificateur->setCallbackResultat(function (string $urlCrawlee, array $resultat) use ($cheminLogs, $mappingSourcePrefixee): void {
+    $sourceOriginale = $mappingSourcePrefixee[$urlCrawlee] ?? $urlCrawlee;
+    $logEntry = [
+        'source' => $sourceOriginale,
+        'urlCrawlee' => $urlCrawlee,
+        'statut' => $resultat['statut'],
+        'urlFinale' => $resultat['urlFinale'],
+        'erreur' => $resultat['erreur'],
+        'chaineRedirections' => $resultat['chaineRedirections'] ?? [],
+    ];
+    file_put_contents($cheminLogs, json_encode($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n", FILE_APPEND | LOCK_EX);
+});
+
+$derniereMaj = 0;
+$verificateur->setCallbackProgression(function (int $verifiees, int $totalUrls) use ($gestionnaire, $jobId, &$derniereMaj): void {
+    $maintenant = time();
+    if ($maintenant - $derniereMaj < 2 && $verifiees < $totalUrls) {
+        return;
+    }
+    $derniereMaj = $maintenant;
+
+    $progression = $totalUrls > 0 ? (int) round(($verifiees / $totalUrls) * 100) : 0;
+    $gestionnaire->ecrireProgression($jobId, [
+        'status' => 'running',
+        'phase' => 'verification_http',
+        'progress' => min($progression, 99),
+        'verifiees' => $verifiees,
+        'total' => $totalUrls,
+    ]);
+});
+
+$resultats = $verificateur->verifier($urlsAVerifier);
+
+// Re-indexer les resultats par source originale
+$resultatsParSource = [];
+foreach ($resultats as $urlPrefixee => $verif) {
+    $sourceOriginale = $mappingSourcePrefixee[$urlPrefixee] ?? $urlPrefixee;
+    $resultatsParSource[$sourceOriginale] = $verif;
+}
+
+// Sauvegarder les resultats avec le mapping destinations
+$gestionnaire->sauvegarderResultats($jobId, [
+    'verificationsHttp' => $resultatsParSource,
+    'mappingDestinations' => $mappingDestinations,
+]);
+
+$gestionnaire->ecrireProgression($jobId, [
+    'status' => 'done',
+    'phase' => 'termine',
+    'progress' => 100,
+    'verifiees' => $total,
+    'total' => $total,
+]);
+
+fwrite(STDOUT, "Verification terminee : $total URLs verifiees.\n");
