@@ -553,10 +553,16 @@
             var data;
             try { data = JSON.parse(xhr.responseText); } catch (e) { data = null; }
 
+            console.log('[RedirectsChecker] HTTP ' + xhr.status, data ? 'JSON OK' : 'JSON parse failed');
+            if (!data) {
+                console.error('[RedirectsChecker] Reponse brute:', xhr.responseText.substring(0, 2000));
+            }
+
             if (xhr.status >= 200 && xhr.status < 300 && data && data.jobId) {
                 window.location.href = baseUrl + '/results.php?job=' + encodeURIComponent(data.jobId);
             } else {
-                var msg = (data && data.erreur) ? data.erreur : t('msg.erreurAnalyse');
+                var msg = (data && data.erreur) ? data.erreur : t('msg.erreurAnalyse') + ' (HTTP ' + xhr.status + ')';
+                console.error('[RedirectsChecker] Erreur:', msg);
                 afficherStatus(msg, 'error');
                 btn.disabled = false;
                 btn.innerHTML = t('form.analyser');

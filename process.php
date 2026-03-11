@@ -7,6 +7,20 @@ require_once __DIR__ . '/boot.php';
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 
+// Log des erreurs fatales en JSON
+register_shutdown_function(function (): void {
+    $erreur = error_get_last();
+    if ($erreur !== null && in_array($erreur['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE], true)) {
+        if (!headers_sent()) {
+            http_response_code(500);
+        }
+        echo json_encode([
+            'erreur' => 'Erreur serveur : ' . $erreur['message'],
+            'fichier' => basename($erreur['file']) . ':' . $erreur['line'],
+        ], JSON_UNESCAPED_UNICODE);
+    }
+});
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['erreur' => 'Methode non autorisee.']);
