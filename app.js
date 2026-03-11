@@ -1083,14 +1083,20 @@
             statut = t('status.chaine'); classeStatut = 'badge-chaine';
         }
 
-        var httpBadge = '';
+        var httpBadgeDest = '';
+        var httpBadgeSrc = '';
         var urlFinaleInfo = '';
         var verif = chercherVerifHttp(p.source);
 
         if (verif) {
             var code = verif.statut;
             var classeHttp = code === 200 ? 'bg-success' : (code === 404 ? 'bg-danger' : (code >= 300 && code < 400 ? 'bg-warning text-dark' : (code >= 500 ? 'bg-danger' : 'bg-secondary')));
-            httpBadge = '<span class="badge ' + classeHttp + ' badge-http">' + (code || 'ERR') + '</span>';
+            httpBadgeDest = '<span class="badge ' + classeHttp + ' badge-http">' + (code || 'ERR') + '</span>';
+
+            // Code HTTP de la source (premier code de la chaine de redirections)
+            var codeSrc = (verif.chaineRedirections && verif.chaineRedirections.length > 0) ? verif.chaineRedirections[0].statut : code;
+            var classeSrc = (codeSrc >= 300 && codeSrc < 400) ? 'bg-warning text-dark' : (codeSrc === 200 ? 'bg-secondary' : (codeSrc >= 400 ? 'bg-danger' : 'bg-secondary'));
+            httpBadgeSrc = '<span class="badge ' + classeSrc + ' badge-http">' + (codeSrc || 'ERR') + '</span>';
 
             if (code && code >= 400) {
                 statut = code === 404 ? '404' : 'HTTP ' + code;
@@ -1117,7 +1123,8 @@
             + '<td class="url-cell" title="' + escapeAttr(p.source) + '">' + escapeHtml(p.source) + '</td>'
             + '<td class="url-cell" title="' + escapeAttr(p.destination) + '">' + escapeHtml(p.destination) + urlFinaleInfo + '</td>'
             + '<td><span class="' + classeStatut + '">' + statut + '</span></td>'
-            + '<td>' + httpBadge + '</td>'
+            + '<td>' + httpBadgeSrc + '</td>'
+            + '<td>' + httpBadgeDest + '</td>'
             + '</tr>';
     }
 

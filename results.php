@@ -215,7 +215,8 @@ $logOffsetInitial = file_exists($cheminLogs) ? filesize($cheminLogs) : 0;
                                     <th class="sortable-th" data-col="1" data-type="str" data-i18n="table.source">Source</th>
                                     <th data-i18n="table.destination">Destination</th>
                                     <th data-i18n="table.statut">Statut</th>
-                                    <th data-i18n="table.http">HTTP</th>
+                                    <th data-i18n="table.httpSource">HTTP Src</th>
+                                    <th data-i18n="table.http">HTTP Dest</th>
                                 </tr>
                             </thead>
                             <tbody id="bodyListe"></tbody>

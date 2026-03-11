@@ -105,7 +105,8 @@ var TRANSLATIONS = {
         // -- Resultats : table liste --
         'table.destination':        'Destination',
         'table.statut':             'Statut',
-        'table.http':               'HTTP',
+        'table.httpSource':         'HTTP Src',
+        'table.http':               'HTTP Dest',
 
         // -- Resultats : table avertissements --
         'table.avertissement':      'Avertissement',
@@ -276,7 +277,8 @@ var TRANSLATIONS = {
         // -- Resultats : table liste --
         'table.destination':        'Destination',
         'table.statut':             'Status',
-        'table.http':               'HTTP',
+        'table.httpSource':         'HTTP Src',
+        'table.http':               'HTTP Dest',
 
         // -- Resultats : table avertissements --
         'table.avertissement':      'Warning',
