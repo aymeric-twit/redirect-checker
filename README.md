@@ -69,14 +69,114 @@ php -S localhost:8080
 
 Ouvrir `http://localhost:8080` dans le navigateur.
 
-### Workflow
+### Etape 1 — Importer les redirections
 
-1. **Importer les redirections** : coller la liste dans le textarea ou importer un fichier CSV/TSV (max 5 Mo). Formats acceptes : tabulation, point-virgule ou virgule comme separateur.
-2. **Configurer les options** (optionnel) : choisir le separateur, activer/desactiver la verification HTTP, ajuster les parametres du crawler (concurrence, delai, timeout, User-Agent, headers custom).
-3. **Lancer l'analyse** : clic sur "Analyser les redirections". Si des URLs relatives sont detectees avec la verification HTTP activee, une modale demande le domaine a prefixer.
-4. **Consulter les resultats** : KPI synthetiques en haut, onglet "Problemes" avec filtres, onglet "Liste complete" pour toutes les redirections.
-5. **Corriger** : editer les destinations en cliquant dessus, ou appliquer toutes les corrections automatiques en un clic.
-6. **Exporter** : telecharger le CSV des corrections ou le CSV des problemes.
+Deux modes d'acquisition sont disponibles :
+
+- **Onglet "Coller le texte"** — Coller directement la liste des redirections dans le textarea. Une redirection par ligne, avec source et destination separees par une tabulation, un point-virgule ou une virgule. Le separateur est auto-detecte.
+- **Onglet "Importer un fichier"** — Importer un fichier CSV, TSV ou TXT avec 2 colonnes (source et destination). **Taille maximale : 2 Mo** (~30 000 redirections). Formats acceptes : `.csv`, `.tsv`, `.txt`.
+
+Exemples de formats valides :
+
+```
+/ancienne-page	/nouvelle-page
+/ancien-produit;/nouveau-produit
+https://example.com/old,https://example.com/new
+```
+
+### Etape 2 — Configurer les options (optionnel)
+
+- **Separateur** — Par defaut en auto-detection. Forcer manuellement si necessaire (tabulation, point-virgule, virgule).
+- **Verifier les 404 (HTTP)** — Cocher cette option pour lancer un crawl HTTP des URLs sources. Le worker verifie les codes de reponse reels (301, 404, 500, etc.) et compare la destination reelle avec la destination declaree.
+
+#### Options avancees du crawler
+
+Accessibles en cliquant sur "Options avancees du crawler" :
+
+| Option | Defaut | Description |
+|--------|--------|-------------|
+| Requetes concurrentes | 2 | Nombre de requetes HTTP simultanees (1 a 10) |
+| Delai entre requetes | 100 ms | Pause entre chaque requete (0 a 2 s) |
+| Timeout par requete | 5 s | Delai maximal d'attente (3 a 30 s) |
+| Max redirections suivies | 3 | Nombre de sauts suivis (0 a 5) |
+| User-Agent | Personnalise | Googlebot, Googlebot Mobile, Bingbot, Chrome Desktop, ou custom |
+| Header HTTP custom | — | Header supplementaire (ex: `X-Custom-Header: valeur`) |
+
+#### Sauvegarder une configuration
+
+Les presets du crawler sont persistants. Saisir un nom dans le champ "Nom de la config" et cliquer sur **Sauvegarder**. Jusqu'a 50 configurations par utilisateur. Les charger ou les supprimer via le menu deroulant "Configs sauvegardees".
+
+### Etape 3 — Lancer l'analyse
+
+Cliquer sur **Analyser les redirections**. Si des URLs relatives sont detectees avec la verification HTTP activee, une modale demande le domaine a prefixer (ex: `https://www.example.com`).
+
+L'analyse se deroule en deux phases :
+
+1. **Analyse statique du graphe** — Instantanee. Detection des chaines, boucles et auto-redirections par analyse du graphe de redirections.
+2. **Verification HTTP** (si activee) — Le worker crawle les URLs sources en arriere-plan. La progression s'affiche en temps reel avec un terminal de logs et une barre de progression.
+
+### Etape 4 — Lire les resultats
+
+#### KPI synthetiques
+
+Quatre indicateurs en haut de page :
+
+- **Redirections 3xx** — Nombre de sources qui retournent effectivement un code 3xx
+- **Chaines** — Nombre de chaines detectees (2+ sauts)
+- **Erreurs HTTP** — Nombre de sources en erreur (404, 5xx, timeout)
+- **Corrections** — Nombre de destinations corrigees manuellement
+
+#### Onglet "Problemes"
+
+Tableau filtrable par type de probleme :
+
+| Filtre | Description |
+|--------|-------------|
+| Chaines | Redirections avec 2+ sauts (A → B → C) |
+| Boucles | Cycles dans le graphe (A → B → A) |
+| Auto-redir | URL qui redirige vers elle-meme |
+| 404 | Source qui retourne un 404 |
+| Erreur HTTP | Source en erreur (5xx, timeout, connexion impossible) |
+| Redir. inattendue | La destination reelle ne correspond pas a la destination declaree |
+| Pas de redir. | La source repond 200 sans rediriger |
+
+Chaque probleme affiche la source, la destination actuelle, le detail du probleme et une correction proposee (editable en cliquant dessus).
+
+#### Onglet "Liste complete"
+
+Tableau de toutes les redirections avec les colonnes :
+
+| Colonne | Description |
+|---------|-------------|
+| Source | URL source de la redirection |
+| Destination | URL de destination declaree (+ URL finale reelle si differente) |
+| Statut | OK, Chaine, Boucle, Auto, 404, Redirect inattendue, Pas de redir. |
+| HTTP Src | Code HTTP retourne par la source (301, 302, 200, 404, etc.) |
+| HTTP Dest | Code HTTP retourne par la destination finale (200, 404, 500, etc.) |
+
+Triable par colonne source, avec recherche textuelle et pagination.
+
+### Etape 5 — Corriger et exporter
+
+- **Edition inline** — Cliquer sur une destination corrigee pour la modifier manuellement.
+- **Appliquer toutes les corrections** — Bouton pour accepter toutes les corrections automatiques (aplatissement des chaines).
+- **Export CSV corrections** — Telecharge un CSV avec les sources, destinations originales, destinations corrigees et raisons.
+- **Export CSV problemes** — Telecharge un CSV avec les types de problemes, sources, destinations et details.
+- **Export JSON** — Telecharge les donnees brutes completes au format JSON.
+
+### Historique
+
+L'onglet **Historique** liste les analyses precedentes (conservees 72h). Chaque entree affiche la date, le domaine, le nombre d'URLs, le statut du crawl et un lien pour revoir les resultats.
+
+### Limites
+
+| Limite | Valeur |
+|--------|--------|
+| Taille max fichier | 2 Mo |
+| Memoire process.php | 256 Mo |
+| Memoire worker.php | 256 Mo |
+| Retention historique | 72 heures |
+| Configs sauvegardees | 50 par utilisateur |
 
 ### Lancer les tests
 
