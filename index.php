@@ -103,7 +103,7 @@ if (!file_exists($dataHtaccess)) {
                         <div class="mb-3">
                             <label for="fichierCsv" class="form-label fw-semibold" data-i18n="form.labelFichier">Fichier CSV / TSV</label>
                             <input type="file" class="form-control" id="fichierCsv" name="fichier_csv" accept=".csv,.tsv,.txt">
-                            <div class="form-text" data-i18n="form.aideFichier">Fichier avec 2 colonnes : source et destination. Max 2 Mo.</div>
+                            <div class="form-text" data-i18n="form.aideFichier">Fichier avec 2 colonnes : source et destination. Max 5 Mo.</div>
                             <div id="fichierInfo" class="d-none mt-2"></div>
                         </div>
                     </div>

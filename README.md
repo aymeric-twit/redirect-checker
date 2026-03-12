@@ -74,7 +74,7 @@ Ouvrir `http://localhost:8080` dans le navigateur.
 Deux modes d'acquisition sont disponibles :
 
 - **Onglet "Coller le texte"** — Coller directement la liste des redirections dans le textarea. Une redirection par ligne, avec source et destination separees par une tabulation, un point-virgule ou une virgule. Le separateur est auto-detecte.
-- **Onglet "Importer un fichier"** — Importer un fichier CSV, TSV ou TXT avec 2 colonnes (source et destination). **Taille maximale : 2 Mo** (~30 000 redirections). Formats acceptes : `.csv`, `.tsv`, `.txt`.
+- **Onglet "Importer un fichier"** — Importer un fichier CSV, TSV ou TXT avec 2 colonnes (source et destination). **Taille maximale : 5 Mo** (~100 000 redirections). Formats acceptes : `.csv`, `.tsv`, `.txt`.
 
 Exemples de formats valides :
 
@@ -172,7 +172,7 @@ L'onglet **Historique** liste les analyses precedentes (conservees 72h). Chaque 
 
 | Limite | Valeur |
 |--------|--------|
-| Taille max fichier | 2 Mo |
+| Taille max fichier | 5 Mo |
 | Memoire process.php | 256 Mo |
 | Memoire worker.php | 256 Mo |
 | Retention historique | 72 heures |

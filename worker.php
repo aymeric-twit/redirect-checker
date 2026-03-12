@@ -7,6 +7,8 @@ require_once __DIR__ . '/boot.php';
 set_time_limit(0);
 ini_set('memory_limit', '256M');
 
+const TAILLE_BATCH = 5000;
+
 $options = getopt('', ['job:']);
 $jobId = $options['job'] ?? null;
 
@@ -69,7 +71,6 @@ if ($domaine !== '') {
 }
 
 // Extraire les URLs source uniques a crawler (prefixees)
-// On crawle les SOURCES pour verifier ou elles redirigent reellement
 $urlsSourceUniques = [];
 $mappingSourcePrefixee = []; // URL prefixee -> URL originale
 foreach ($paires as $i => $paire) {
@@ -90,7 +91,11 @@ foreach ($pairesOrigine as $i => $paireOrigine) {
     }
 }
 
+// Liberer la memoire des paires (plus besoin)
+unset($analyse['paires'], $pairesOrigine, $paires);
+
 $urlsAVerifier = array_keys($urlsSourceUniques);
+unset($urlsSourceUniques);
 $total = count($urlsAVerifier);
 
 if ($total === 0) {
@@ -118,55 +123,91 @@ $gestionnaire->ecrireProgression($jobId, [
 $cheminLogs = $cheminJob . '/logs.jsonl';
 file_put_contents($cheminLogs, '');
 
-// Verification HTTP
-$verificateur = new VerificateurHttp($concurrence, $timeout, $userAgent, $maxRedirections, $delaiMs, $headersSupplementaires);
+// Fichier de resultats incrementaux (JSON lines, un resultat par ligne)
+$cheminResultats = $cheminJob . '/resultats_incremental.jsonl';
+file_put_contents($cheminResultats, '');
 
-// Callback logs temps reel : ecrire chaque resultat dans logs.jsonl
-$verificateur->setCallbackResultat(function (string $urlCrawlee, array $resultat) use ($cheminLogs, $mappingSourcePrefixee): void {
-    $sourceOriginale = $mappingSourcePrefixee[$urlCrawlee] ?? $urlCrawlee;
-    $logEntry = [
-        'source' => $sourceOriginale,
-        'urlCrawlee' => $urlCrawlee,
-        'statut' => $resultat['statut'],
-        'urlFinale' => $resultat['urlFinale'],
-        'erreur' => $resultat['erreur'],
-        'chaineRedirections' => $resultat['chaineRedirections'] ?? [],
-    ];
-    file_put_contents($cheminLogs, json_encode($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n", FILE_APPEND | LOCK_EX);
-});
+// Traitement par batch pour limiter la memoire
+$batches = array_chunk($urlsAVerifier, TAILLE_BATCH);
+unset($urlsAVerifier);
 
-$derniereMaj = 0;
-$verificateur->setCallbackProgression(function (int $verifiees, int $totalUrls) use ($gestionnaire, $jobId, &$derniereMaj): void {
-    $maintenant = time();
-    if ($maintenant - $derniereMaj < 2 && $verifiees < $totalUrls) {
-        return;
-    }
-    $derniereMaj = $maintenant;
+$verifieesGlobal = 0;
 
-    $progression = $totalUrls > 0 ? (int) round(($verifiees / $totalUrls) * 100) : 0;
-    $gestionnaire->ecrireProgression($jobId, [
-        'status' => 'running',
-        'phase' => 'verification_http',
-        'progress' => min($progression, 99),
-        'verifiees' => $verifiees,
-        'total' => $totalUrls,
-    ]);
-});
+foreach ($batches as $numeroBatch => $batchUrls) {
+    $verificateur = new VerificateurHttp($concurrence, $timeout, $userAgent, $maxRedirections, $delaiMs, $headersSupplementaires);
 
-$resultats = $verificateur->verifier($urlsAVerifier);
+    // Callback logs temps reel + ecriture incrementale des resultats
+    $verificateur->setCallbackResultat(function (string $urlCrawlee, array $resultat) use ($cheminLogs, $cheminResultats, $mappingSourcePrefixee): void {
+        $sourceOriginale = $mappingSourcePrefixee[$urlCrawlee] ?? $urlCrawlee;
+        $logEntry = [
+            'source' => $sourceOriginale,
+            'urlCrawlee' => $urlCrawlee,
+            'statut' => $resultat['statut'],
+            'urlFinale' => $resultat['urlFinale'],
+            'erreur' => $resultat['erreur'],
+            'chaineRedirections' => $resultat['chaineRedirections'] ?? [],
+        ];
+        $ligne = json_encode($logEntry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+        file_put_contents($cheminLogs, $ligne, FILE_APPEND | LOCK_EX);
 
-// Re-indexer les resultats par source originale
-$resultatsParSource = [];
-foreach ($resultats as $urlPrefixee => $verif) {
-    $sourceOriginale = $mappingSourcePrefixee[$urlPrefixee] ?? $urlPrefixee;
-    $resultatsParSource[$sourceOriginale] = $verif;
+        // Ecrire le resultat complet pour reconstruction finale
+        $resultatLigne = [
+            'source' => $sourceOriginale,
+            'resultat' => $resultat,
+        ];
+        file_put_contents($cheminResultats, json_encode($resultatLigne, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n", FILE_APPEND | LOCK_EX);
+    });
+
+    $verificateur->setCallbackProgression(function (int $verifieesBatch, int $totalBatch) use ($gestionnaire, $jobId, &$verifieesGlobal, $total, $numeroBatch): void {
+        static $derniereMaj = 0;
+        $maintenant = time();
+        if ($maintenant - $derniereMaj < 2 && ($verifieesGlobal + $verifieesBatch) < $total) {
+            return;
+        }
+        $derniereMaj = $maintenant;
+
+        $verifieesTotal = $verifieesGlobal + $verifieesBatch;
+        $progression = $total > 0 ? (int) round(($verifieesTotal / $total) * 100) : 0;
+        $gestionnaire->ecrireProgression($jobId, [
+            'status' => 'running',
+            'phase' => 'verification_http',
+            'progress' => min($progression, 99),
+            'verifiees' => $verifieesTotal,
+            'total' => $total,
+        ]);
+    });
+
+    // Crawler le batch
+    $resultatsBatch = $verificateur->verifier($batchUrls);
+    $verifieesGlobal += count($batchUrls);
+
+    // Liberer la memoire du batch
+    unset($resultatsBatch, $verificateur, $batchUrls);
+    gc_collect_cycles();
+
+    fwrite(STDOUT, "Batch " . ($numeroBatch + 1) . "/" . count($batches) . " termine ($verifieesGlobal/$total URLs).\n");
 }
 
-// Sauvegarder les resultats avec le mapping destinations
+// Reconstruction du fichier resultats.json depuis le fichier incremental
+$resultatsParSource = [];
+$handle = fopen($cheminResultats, 'r');
+if ($handle !== false) {
+    while (($ligne = fgets($handle)) !== false) {
+        $entry = json_decode($ligne, true);
+        if ($entry !== null && isset($entry['source'], $entry['resultat'])) {
+            $resultatsParSource[$entry['source']] = $entry['resultat'];
+        }
+    }
+    fclose($handle);
+}
+
 $gestionnaire->sauvegarderResultats($jobId, [
     'verificationsHttp' => $resultatsParSource,
     'mappingDestinations' => $mappingDestinations,
 ]);
+
+// Nettoyer le fichier incremental
+unlink($cheminResultats);
 
 $gestionnaire->ecrireProgression($jobId, [
     'status' => 'done',
