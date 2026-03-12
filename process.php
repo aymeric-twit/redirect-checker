@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/boot.php';
 
 set_time_limit(120);
-ini_set('memory_limit', '512M');
+ini_set('memory_limit', '256M');
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -79,10 +79,10 @@ if (!empty($_FILES['fichier_csv']) && $_FILES['fichier_csv']['error'] === UPLOAD
         exit;
     }
 
-    $tailleMax = 10 * 1024 * 1024;
+    $tailleMax = 2 * 1024 * 1024;
     if ($fichier['size'] > $tailleMax) {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Le fichier ne doit pas depasser 10 Mo.']);
+        echo json_encode(['erreur' => 'Le fichier ne doit pas depasser 2 Mo.']);
         exit;
     }
 
