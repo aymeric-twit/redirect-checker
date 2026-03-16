@@ -345,26 +345,8 @@ body {
     font-size: 0.85rem;
     line-height: 1.6;
     position: relative;
-    max-height: 5.5rem;
     overflow: hidden;
-    transition: max-height 0.4s ease;
-}
-.config-help-panel::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3rem;
-    background: linear-gradient(transparent, var(--brand-teal-light));
-    pointer-events: none;
-    transition: opacity 0.3s;
-}
-.config-help-panel.expanded {
-    max-height: 2000px;
-}
-.config-help-panel.expanded::after {
-    opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
 }
 .config-help-panel ul {
     padding-left: 1.25rem;
@@ -395,18 +377,14 @@ body {
 .help-title[aria-expanded="true"] .help-chevron {
     transform: rotate(180deg);
 }
-.help-toggle-btn {
-    position: absolute;
-    bottom: 0.5rem;
-    right: 1rem;
-    font-size: 0.75rem;
-    color: var(--brand-dark);
-    cursor: pointer;
-    z-index: 2;
-    font-weight: 600;
-}
-.help-toggle-btn:hover {
-    color: var(--brand-teal);
+/* Help panel replie apres lancement analyse */
+.config-help-panel.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    border-width: 0;
+    margin: 0;
 }
 
 /* ---------- Responsive ---------- */
