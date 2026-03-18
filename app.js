@@ -177,7 +177,14 @@
         fetch(baseUrl + '/historique.php', {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(function (r) { return r.json(); })
+        .then(function (r) {
+            return r.text().then(function (txt) {
+                try { return JSON.parse(txt); } catch (e) {
+                    console.error('[RedirectsChecker] historique.php reponse non-JSON:', txt.substring(0, 500));
+                    return { jobs: [] };
+                }
+            });
+        })
         .then(function (data) {
             if (chargement) chargement.classList.add('d-none');
             var jobs = data.jobs || [];
