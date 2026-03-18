@@ -74,7 +74,7 @@ Ouvrir `http://localhost:8080` dans le navigateur.
 Deux modes d'acquisition sont disponibles :
 
 - **Onglet "Coller le texte"** — Coller directement la liste des redirections dans le textarea. Une redirection par ligne, avec source et destination separees par une tabulation, un point-virgule ou une virgule. Le separateur est auto-detecte.
-- **Onglet "Importer un fichier"** — Importer un fichier CSV, TSV ou TXT avec 2 colonnes (source et destination). **Taille maximale : 5 Mo** (~100 000 redirections). Formats acceptes : `.csv`, `.tsv`, `.txt`.
+- **Onglet "Importer un fichier"** — Importer un fichier CSV, TSV ou TXT avec 2 colonnes (source et destination). **Taille maximale : 5 Mo / 50 000 redirections**. Formats acceptes : `.csv`, `.tsv`, `.txt`.
 
 Exemples de formats valides :
 

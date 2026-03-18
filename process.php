@@ -109,6 +109,15 @@ if (trim($contenu) === '') {
 $analyseur = new AnalyseurRedirections();
 $resultatParsing = $analyseur->analyser($contenu, $separateur);
 
+$maxRedirections = 50000;
+if (count($resultatParsing['paires']) > $maxRedirections) {
+    http_response_code(400);
+    echo json_encode([
+        'erreur' => 'Trop de redirections (' . number_format(count($resultatParsing['paires']), 0, ',', ' ') . '). Maximum autorise : ' . number_format($maxRedirections, 0, ',', ' ') . '.',
+    ]);
+    exit;
+}
+
 if (empty($resultatParsing['paires'])) {
     http_response_code(400);
     echo json_encode([

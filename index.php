@@ -274,7 +274,7 @@ if (!file_exists($dataHtaccess)) {
                 <i class="bi bi-speedometer2 me-1"></i> Limites
             </div>
             <ul class="mb-0">
-                <li data-i18n="help.limite_fichier">Fichier max : <strong>5 Mo</strong> (~100 000 redirections)</li>
+                <li data-i18n="help.limite_fichier">Fichier max : <strong>5 Mo</strong> / <strong>50 000 redirections</strong></li>
                 <li data-i18n="help.limite_historique">Historique conserve <strong>72 heures</strong></li>
                 <li data-i18n="help.limite_configs">Jusqu'a <strong>50 configs</strong> sauvegardees</li>
             </ul>
