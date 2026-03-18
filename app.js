@@ -290,11 +290,17 @@
             body: JSON.stringify({ nom: nom, valeurs: valeurs })
         })
         .then(function (r) {
-            if (!r.ok) return r.json().then(function (d) { throw d; });
-            return r.json();
+            return r.text().then(function (txt) {
+                var data;
+                try { data = JSON.parse(txt); } catch (e) { data = null; }
+                if (!r.ok) {
+                    throw { erreur: (data && data.erreur) ? data.erreur : 'HTTP ' + r.status + ' : ' + txt.substring(0, 200) };
+                }
+                return data;
+            });
         })
         .then(function () { callback(null); })
-        .catch(function (err) { callback(err && err.erreur ? err.erreur : t('msg.erreurAnalyse')); });
+        .catch(function (err) { callback(err && err.erreur ? err.erreur : t('msg.erreurConfig')); });
     }
 
     function supprimerConfig(nom, callback) {
@@ -305,7 +311,7 @@
         })
         .then(function (r) { return r.json(); })
         .then(function () { callback(null); })
-        .catch(function () { callback(t('msg.erreurAnalyse')); });
+        .catch(function () { callback(t('msg.erreurConfig')); });
     }
 
     function lireValeursFormulaire() {
