@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/boot.php';
 
 set_time_limit(0);
-ini_set('memory_limit', '256M');
+ini_set('memory_limit', '512M');
 
 const TAILLE_BATCH = 5000;
 
@@ -117,6 +117,7 @@ $gestionnaire->ecrireProgression($jobId, [
     'progress' => 0,
     'verifiees' => 0,
     'total' => $total,
+    'pid' => getmypid(),
 ]);
 
 // Fichier de logs temps reel (JSON lines)
@@ -174,6 +175,7 @@ foreach ($batches as $numeroBatch => $batchUrls) {
             'progress' => min($progression, 99),
             'verifiees' => $verifieesTotal,
             'total' => $total,
+            'pid' => getmypid(),
         ]);
     });
 
@@ -188,23 +190,33 @@ foreach ($batches as $numeroBatch => $batchUrls) {
     fwrite(STDOUT, "Batch " . ($numeroBatch + 1) . "/" . count($batches) . " termine ($verifieesGlobal/$total URLs).\n");
 }
 
-// Reconstruction du fichier resultats.json depuis le fichier incremental
-$resultatsParSource = [];
-$handle = fopen($cheminResultats, 'r');
-if ($handle !== false) {
-    while (($ligne = fgets($handle)) !== false) {
+// Reconstruction du fichier resultats.json depuis le fichier incremental (ecriture streaming)
+$cheminResultatsFinal = $cheminJob . '/resultats.json';
+$handleOut = fopen($cheminResultatsFinal, 'w');
+fwrite($handleOut, '{"verificationsHttp":{');
+
+$handleIn = fopen($cheminResultats, 'r');
+$premier = true;
+if ($handleIn !== false) {
+    while (($ligne = fgets($handleIn)) !== false) {
         $entry = json_decode($ligne, true);
         if ($entry !== null && isset($entry['source'], $entry['resultat'])) {
-            $resultatsParSource[$entry['source']] = $entry['resultat'];
+            if (!$premier) {
+                fwrite($handleOut, ',');
+            }
+            $premier = false;
+            fwrite($handleOut, json_encode($entry['source'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            fwrite($handleOut, ':');
+            fwrite($handleOut, json_encode($entry['resultat'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
     }
-    fclose($handle);
+    fclose($handleIn);
 }
 
-$gestionnaire->sauvegarderResultats($jobId, [
-    'verificationsHttp' => $resultatsParSource,
-    'mappingDestinations' => $mappingDestinations,
-]);
+fwrite($handleOut, '},"mappingDestinations":');
+fwrite($handleOut, json_encode($mappingDestinations, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+fwrite($handleOut, '}');
+fclose($handleOut);
 
 // Nettoyer le fichier incremental
 unlink($cheminResultats);
@@ -215,6 +227,7 @@ $gestionnaire->ecrireProgression($jobId, [
     'progress' => 100,
     'verifiees' => $total,
     'total' => $total,
+    'pid' => getmypid(),
 ]);
 
 fwrite(STDOUT, "Verification terminee : $total URLs verifiees.\n");

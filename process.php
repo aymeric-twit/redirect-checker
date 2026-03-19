@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/boot.php';
 
 set_time_limit(120);
-ini_set('memory_limit', '256M');
+ini_set('memory_limit', '512M');
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');

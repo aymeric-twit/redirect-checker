@@ -7,7 +7,7 @@
     "entry_point": "index.php",
     "sort_order": 55,
     "quota_mode": "form_submit",
-    "default_quota": 100,
+    "default_quota": 1000,
     "display_mode": "embedded",
     "env_keys": [],
     "languages": [
@@ -58,7 +58,5 @@
     ],
     "credits_par_analyse": 1,
     "units_per_credit": 50,
-    "unit_label": "URLs",
-    "daily_limit": 1000,
     "periode_quota": "jour"
 }
