@@ -49,7 +49,7 @@ if (!file_exists($dataHtaccess)) {
     </div>
 </nav>
 
-<div class="container py-3">
+<div class="container-fluid px-lg-4 py-4">
     <?php if ($erreur): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($erreur) ?></div>
     <?php endif; ?>

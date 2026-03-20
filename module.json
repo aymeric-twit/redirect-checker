@@ -4,6 +4,7 @@
     "description": "Detecte les chaines, boucles et 404 dans une liste de redirections 301",
     "version": "1.0.0",
     "icon": "bi-signpost-split",
+    "illustration": "illustration.svg",
     "entry_point": "index.php",
     "sort_order": 55,
     "quota_mode": "form_submit",
