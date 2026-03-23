@@ -48,6 +48,20 @@
         select.addEventListener('change', function () { changerLangue(this.value); });
     }
 
+    // Extraction du message bilingue depuis une reponse PHP (erreur_fr/erreur_en ou message_fr/message_en)
+    function msgBilingue(data, champ) {
+        if (!data) return '';
+        var champFr = champ + '_fr';
+        var champEn = champ + '_en';
+        if (langueActuelle === 'en' && data[champEn]) return data[champEn];
+        if (langueActuelle === 'fr' && data[champFr]) return data[champFr];
+        // Fallback : champ bilingue selon langue, puis champ original
+        if (data[champFr] || data[champEn]) {
+            return langueActuelle === 'en' ? (data[champEn] || data[champFr]) : (data[champFr] || data[champEn]);
+        }
+        return data[champ] || '';
+    }
+
     if (typeof window !== 'undefined') {
         window.addEventListener('platformLangChange', function (e) {
             if (e.detail && e.detail.lang) changerLangue(e.detail.lang);
@@ -301,7 +315,7 @@
                 var data;
                 try { data = JSON.parse(txt); } catch (e) { data = null; }
                 if (!r.ok) {
-                    throw { erreur: (data && data.erreur) ? data.erreur : 'HTTP ' + r.status + ' : ' + txt.substring(0, 200) };
+                    throw { erreur: (data && (data.erreur || data.erreur_fr)) ? msgBilingue(data, 'erreur') : 'HTTP ' + r.status + ' : ' + txt.substring(0, 200) };
                 }
                 return data;
             });
@@ -580,7 +594,7 @@
             if (xhr.status >= 200 && xhr.status < 300 && data && data.jobId) {
                 window.location.href = baseUrl + '/results.php?job=' + encodeURIComponent(data.jobId);
             } else {
-                var msg = (data && data.erreur) ? data.erreur : t('msg.erreurAnalyse') + ' (HTTP ' + xhr.status + ')';
+                var msg = (data && (data.erreur || data.erreur_fr)) ? msgBilingue(data, 'erreur') : t('msg.erreurAnalyse') + ' (HTTP ' + xhr.status + ')';
                 console.error('[RedirectsChecker] Erreur:', msg);
                 afficherStatus(msg, 'error');
                 btn.disabled = false;
@@ -1251,7 +1265,7 @@
             if (data.status === 'error') {
                 clearInterval(pollingTimer);
                 document.getElementById('progressSection').innerHTML =
-                    '<div class="card-body"><div class="alert alert-danger mb-0">' + escapeHtml(data.message || t('msg.erreurWorker')) + '</div></div>';
+                    '<div class="card-body"><div class="alert alert-danger mb-0">' + escapeHtml(msgBilingue(data, 'message') || t('msg.erreurWorker')) + '</div></div>';
                 return;
             }
             mettreAJourProgression(data);

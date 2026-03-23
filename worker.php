@@ -32,6 +32,8 @@ register_shutdown_function(function () use ($gestionnaire, $jobId): void {
         $gestionnaire->ecrireProgression($jobId, [
             'status' => 'error',
             'message' => 'Erreur fatale : ' . $erreur['message'],
+            'message_fr' => 'Erreur fatale : ' . $erreur['message'],
+            'message_en' => 'Fatal error: ' . $erreur['message'],
             'progress' => 0,
         ]);
     }
@@ -42,6 +44,8 @@ if ($analyse === null) {
     $gestionnaire->ecrireProgression($jobId, [
         'status' => 'error',
         'message' => 'Impossible de charger l\'analyse.',
+        'message_fr' => 'Impossible de charger l\'analyse.',
+        'message_en' => 'Unable to load analysis.',
         'progress' => 0,
     ]);
     exit(1);
@@ -106,6 +110,8 @@ if ($total === 0) {
         'verifiees' => 0,
         'total' => 0,
         'message' => 'Aucune URL absolue a verifier.',
+        'message_fr' => 'Aucune URL absolue a verifier.',
+        'message_en' => 'No absolute URL to check.',
     ]);
     $gestionnaire->sauvegarderResultats($jobId, ['verificationsHttp' => []]);
     exit(0);

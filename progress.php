@@ -11,7 +11,11 @@ $jobId = $_GET['job'] ?? '';
 
 if (!GestionnaireJobs::validerJobId($jobId)) {
     http_response_code(400);
-    echo json_encode(['erreur' => 'Job ID invalide.']);
+    echo json_encode([
+        'erreur' => 'Job ID invalide.',
+        'erreur_fr' => 'Job ID invalide.',
+        'erreur_en' => 'Invalid job ID.',
+    ]);
     exit;
 }
 
@@ -20,7 +24,11 @@ $progression = $gestionnaire->lireProgression($jobId);
 
 if ($progression === null) {
     http_response_code(404);
-    echo json_encode(['erreur' => 'Job non trouve.']);
+    echo json_encode([
+        'erreur' => 'Job non trouve.',
+        'erreur_fr' => 'Job non trouve.',
+        'erreur_en' => 'Job not found.',
+    ]);
     exit;
 }
 

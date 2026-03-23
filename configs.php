@@ -55,13 +55,21 @@ if ($methode === 'POST') {
 
     if ($nom === '' || strlen($nom) > 100) {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Nom de config invalide.']);
+        echo json_encode([
+            'erreur' => 'Nom de config invalide.',
+            'erreur_fr' => 'Nom de config invalide.',
+            'erreur_en' => 'Invalid config name.',
+        ]);
         exit;
     }
 
     if (!is_array($valeurs)) {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Valeurs invalides.']);
+        echo json_encode([
+            'erreur' => 'Valeurs invalides.',
+            'erreur_fr' => 'Valeurs invalides.',
+            'erreur_en' => 'Invalid values.',
+        ]);
         exit;
     }
 
@@ -72,7 +80,11 @@ if ($methode === 'POST') {
 
     if (count($configs) >= 50) {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Maximum 50 configs sauvegardees.']);
+        echo json_encode([
+            'erreur' => 'Maximum 50 configs sauvegardees.',
+            'erreur_fr' => 'Maximum 50 configs sauvegardees.',
+            'erreur_en' => 'Maximum 50 saved configs reached.',
+        ]);
         exit;
     }
 
@@ -90,7 +102,11 @@ if ($methode === 'DELETE') {
 
     if ($nom === '') {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Nom requis.']);
+        echo json_encode([
+            'erreur' => 'Nom requis.',
+            'erreur_fr' => 'Nom requis.',
+            'erreur_en' => 'Name required.',
+        ]);
         exit;
     }
 
@@ -103,4 +119,8 @@ if ($methode === 'DELETE') {
 }
 
 http_response_code(405);
-echo json_encode(['erreur' => 'Methode non autorisee.']);
+echo json_encode([
+    'erreur' => 'Methode non autorisee.',
+    'erreur_fr' => 'Methode non autorisee.',
+    'erreur_en' => 'Method not allowed.',
+]);

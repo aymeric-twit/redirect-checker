@@ -11,7 +11,11 @@ $type = $_GET['type'] ?? 'corrige';
 if (!GestionnaireJobs::validerJobId($jobId)) {
     http_response_code(400);
     header('Content-Type: application/json');
-    echo json_encode(['erreur' => 'Job ID invalide.']);
+    echo json_encode([
+        'erreur' => 'Job ID invalide.',
+        'erreur_fr' => 'Job ID invalide.',
+        'erreur_en' => 'Invalid job ID.',
+    ]);
     exit;
 }
 
@@ -20,7 +24,11 @@ $gestionnaire = new GestionnaireJobs();
 if (!is_dir($gestionnaire->cheminJob($jobId))) {
     http_response_code(404);
     header('Content-Type: application/json');
-    echo json_encode(['erreur' => 'Job introuvable.']);
+    echo json_encode([
+        'erreur' => 'Job introuvable.',
+        'erreur_fr' => 'Job introuvable.',
+        'erreur_en' => 'Job not found.',
+    ]);
     exit;
 }
 
@@ -30,7 +38,11 @@ $resultats = $gestionnaire->lireResultats($jobId) ?? [];
 if ($analyse === null) {
     http_response_code(404);
     header('Content-Type: application/json');
-    echo json_encode(['erreur' => 'Analyse introuvable.']);
+    echo json_encode([
+        'erreur' => 'Analyse introuvable.',
+        'erreur_fr' => 'Analyse introuvable.',
+        'erreur_en' => 'Analysis not found.',
+    ]);
     exit;
 }
 

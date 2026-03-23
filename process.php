@@ -19,6 +19,8 @@ register_shutdown_function(function (): void {
         }
         echo json_encode([
             'erreur' => 'Erreur serveur : ' . $erreur['message'],
+            'erreur_fr' => 'Erreur serveur : ' . $erreur['message'],
+            'erreur_en' => 'Server error: ' . $erreur['message'],
             'fichier' => basename($erreur['file']) . ':' . $erreur['line'],
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -26,7 +28,11 @@ register_shutdown_function(function (): void {
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['erreur' => 'Methode non autorisee.']);
+    echo json_encode([
+        'erreur' => 'Methode non autorisee.',
+        'erreur_fr' => 'Methode non autorisee.',
+        'erreur_en' => 'Method not allowed.',
+    ]);
     exit;
 }
 
@@ -34,7 +40,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 if (class_exists('\\Platform\\Module\\Quota')) {
     if (!\Platform\Module\Quota::creditsDisponibles('redirects-checker')) {
         http_response_code(429);
-        echo json_encode(['erreur' => 'Quota epuise.']);
+        echo json_encode([
+            'erreur' => 'Quota epuise.',
+            'erreur_fr' => 'Quota epuise.',
+            'erreur_en' => 'Quota exhausted.',
+        ]);
         exit;
     }
 }
@@ -53,14 +63,22 @@ $customHeaderValeur = trim($_POST['custom_header_valeur'] ?? '');
 // Valider le nom du header (caracteres autorises par RFC 7230)
 if ($customHeaderNom !== '' && !preg_match('/^[A-Za-z0-9\-]+$/', $customHeaderNom)) {
     http_response_code(400);
-    echo json_encode(['erreur' => 'Le nom du header ne doit contenir que des lettres, chiffres et tirets.']);
+    echo json_encode([
+        'erreur' => 'Le nom du header ne doit contenir que des lettres, chiffres et tirets.',
+        'erreur_fr' => 'Le nom du header ne doit contenir que des lettres, chiffres et tirets.',
+        'erreur_en' => 'Header name must only contain letters, digits and hyphens.',
+    ]);
     exit;
 }
 
 // Valider le domaine s'il est fourni
 if ($domaine !== '' && !preg_match('#^https?://.+#', $domaine)) {
     http_response_code(400);
-    echo json_encode(['erreur' => 'Le domaine doit commencer par http:// ou https://']);
+    echo json_encode([
+        'erreur' => 'Le domaine doit commencer par http:// ou https://',
+        'erreur_fr' => 'Le domaine doit commencer par http:// ou https://',
+        'erreur_en' => 'Domain must start with http:// or https://',
+    ]);
     exit;
 }
 
@@ -74,21 +92,33 @@ if (!empty($_FILES['fichier_csv']) && $_FILES['fichier_csv']['error'] === UPLOAD
 
     if (!in_array($ext, $extensionsAutorisees, true)) {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Format de fichier non supporte. Utilisez CSV, TSV ou TXT.']);
+        echo json_encode([
+            'erreur' => 'Format de fichier non supporte. Utilisez CSV, TSV ou TXT.',
+            'erreur_fr' => 'Format de fichier non supporte. Utilisez CSV, TSV ou TXT.',
+            'erreur_en' => 'Unsupported file format. Use CSV, TSV or TXT.',
+        ]);
         exit;
     }
 
     $tailleMax = 5 * 1024 * 1024;
     if ($fichier['size'] > $tailleMax) {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Le fichier ne doit pas depasser 5 Mo.']);
+        echo json_encode([
+            'erreur' => 'Le fichier ne doit pas depasser 5 Mo.',
+            'erreur_fr' => 'Le fichier ne doit pas depasser 5 Mo.',
+            'erreur_en' => 'File must not exceed 5 MB.',
+        ]);
         exit;
     }
 
     $contenu = file_get_contents($fichier['tmp_name']);
     if ($contenu === false) {
         http_response_code(400);
-        echo json_encode(['erreur' => 'Impossible de lire le fichier.']);
+        echo json_encode([
+            'erreur' => 'Impossible de lire le fichier.',
+            'erreur_fr' => 'Impossible de lire le fichier.',
+            'erreur_en' => 'Unable to read file.',
+        ]);
         exit;
     }
 }
@@ -100,7 +130,11 @@ if ($contenu === '' && !empty($_POST['contenu'])) {
 
 if (trim($contenu) === '') {
     http_response_code(400);
-    echo json_encode(['erreur' => 'Aucune donnee fournie. Collez du texte ou importez un fichier.']);
+    echo json_encode([
+        'erreur' => 'Aucune donnee fournie. Collez du texte ou importez un fichier.',
+        'erreur_fr' => 'Aucune donnee fournie. Collez du texte ou importez un fichier.',
+        'erreur_en' => 'No data provided. Paste text or upload a file.',
+    ]);
     exit;
 }
 
@@ -110,9 +144,13 @@ $resultatParsing = $analyseur->analyser($contenu, $separateur);
 
 $maxRedirections = 50000;
 if (count($resultatParsing['paires']) > $maxRedirections) {
+    $nbFormate = number_format(count($resultatParsing['paires']), 0, ',', ' ');
+    $maxFormate = number_format($maxRedirections, 0, ',', ' ');
     http_response_code(400);
     echo json_encode([
-        'erreur' => 'Trop de redirections (' . number_format(count($resultatParsing['paires']), 0, ',', ' ') . '). Maximum autorise : ' . number_format($maxRedirections, 0, ',', ' ') . '.',
+        'erreur' => 'Trop de redirections (' . $nbFormate . '). Maximum autorise : ' . $maxFormate . '.',
+        'erreur_fr' => 'Trop de redirections (' . $nbFormate . '). Maximum autorise : ' . $maxFormate . '.',
+        'erreur_en' => 'Too many redirects (' . $nbFormate . '). Maximum allowed: ' . $maxFormate . '.',
     ]);
     exit;
 }
@@ -122,7 +160,11 @@ if (class_exists('\\Platform\\Module\\Quota')) {
     $nbUrls = count($resultatParsing['paires']);
     if (!\\Platform\\Module\\Quota::trackerSiDisponible('redirects-checker', $nbUrls)) {
         http_response_code(429);
-        echo json_encode(['erreur' => 'Crédits insuffisants pour ' . $nbUrls . ' URLs.']);
+        echo json_encode([
+            'erreur' => 'Crédits insuffisants pour ' . $nbUrls . ' URLs.',
+            'erreur_fr' => 'Crédits insuffisants pour ' . $nbUrls . ' URLs.',
+            'erreur_en' => 'Insufficient credits for ' . $nbUrls . ' URLs.',
+        ]);
         exit;
     }
 }
@@ -131,6 +173,8 @@ if (empty($resultatParsing['paires'])) {
     http_response_code(400);
     echo json_encode([
         'erreur' => 'Aucune redirection valide detectee.',
+        'erreur_fr' => 'Aucune redirection valide detectee.',
+        'erreur_en' => 'No valid redirect detected.',
         'avertissements' => $resultatParsing['avertissements'],
     ]);
     exit;
@@ -150,6 +194,8 @@ if ($verifier404 && $domaine === '') {
         http_response_code(400);
         echo json_encode([
             'erreur' => 'Le domaine est requis pour verifier les URLs relatives (ex: https://example.com). Renseignez le champ "Domaine" ou desactivez la verification HTTP.',
+            'erreur_fr' => 'Le domaine est requis pour verifier les URLs relatives (ex: https://example.com). Renseignez le champ "Domaine" ou desactivez la verification HTTP.',
+            'erreur_en' => 'Domain is required to check relative URLs (e.g. https://example.com). Fill in the "Domain" field or disable HTTP verification.',
         ]);
         exit;
     }
