@@ -155,19 +155,8 @@ if (count($resultatParsing['paires']) > $maxRedirections) {
     exit;
 }
 
-// Décompter les crédits proportionnellement au nombre d'URLs
-if (class_exists('\\Platform\\Module\\Quota')) {
-    $nbUrls = count($resultatParsing['paires']);
-    if (!\\Platform\\Module\\Quota::trackerSiDisponible('redirects-checker', $nbUrls)) {
-        http_response_code(429);
-        echo json_encode([
-            'erreur' => 'Crédits insuffisants pour ' . $nbUrls . ' URLs.',
-            'erreur_fr' => 'Crédits insuffisants pour ' . $nbUrls . ' URLs.',
-            'erreur_en' => 'Insufficient credits for ' . $nbUrls . ' URLs.',
-        ]);
-        exit;
-    }
-}
+// Nombre d'URLs pour déduction ultérieure
+$nbUrlsADeduire = count($resultatParsing['paires']);
 
 if (empty($resultatParsing['paires'])) {
     http_response_code(400);
@@ -265,6 +254,13 @@ if ($verifier404) {
         'total' => 0,
     ]);
     $gestionnaire->sauvegarderResultats($jobId, ['verificationsHttp' => []]);
+}
+
+// Déduction des crédits après traitement réussi
+if (class_exists('\\Platform\\Module\\Quota')) {
+    try {
+        \Platform\Module\Quota::track('redirects-checker', $nbUrlsADeduire);
+    } catch (\Throwable) {}
 }
 
 echo json_encode([
