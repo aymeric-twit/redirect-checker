@@ -42,6 +42,18 @@ class VerificateurHttp
                     ? $config->proxyUrl
                     : null;
                 $proxyAuth = $config->proxyAuth;
+
+                // Si le module est configuré pour utiliser le Go service comme proxy
+                if (class_exists(\Platform\Module\ModuleRegistry::class)) {
+                    $moduleDesc = \Platform\Module\ModuleRegistry::get('redirects-checker');
+                    if ($moduleDesc !== null
+                        && $moduleDesc->crawlerBackend === \Platform\Enum\CrawlerBackend::Go
+                        && $config->crawlerGoServiceUrl !== '') {
+                        $proxy = $config->crawlerGoServiceUrl;
+                        $proxyAuth = '';
+                    }
+                }
+
                 // Headers anti-blocage enrichis (rotation UA, Accept-Language, Sec-Ch-Ua, etc.)
                 $crawlerHeaders = class_exists(\Platform\Http\WebClient::class)
                     ? \Platform\Http\WebClient::construireHeadersCrawler()
