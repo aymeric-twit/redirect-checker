@@ -36,25 +36,37 @@ class VerificateurHttp
         if (defined('PLATFORM_EMBEDDED') && class_exists(\Platform\Http\HttpConfig::class)) {
             try {
                 $config = \Platform\Http\HttpConfig::charger();
-                $timeout = $config->webTimeout;
                 $sslVerify = $config->webSslVerify;
                 $proxy = ($config->proxyEnabled && $config->proxyWeb && $config->proxyUrl !== '')
                     ? $config->proxyUrl
                     : null;
                 $proxyAuth = $config->proxyAuth;
 
-                // Si le module est configuré pour utiliser le Go service comme proxy
+                // Lire le crawler_backend du module
+                $crawlerBackend = null;
                 if (class_exists(\Platform\Module\ModuleRegistry::class)) {
                     $moduleDesc = \Platform\Module\ModuleRegistry::get('redirects-checker');
-                    if ($moduleDesc !== null
-                        && $moduleDesc->crawlerBackend === \Platform\Enum\CrawlerBackend::Go
-                        && $config->crawlerGoServiceUrl !== '') {
-                        $proxy = $config->crawlerGoServiceUrl;
-                        $proxyAuth = '';
-                    }
+                    $crawlerBackend = $moduleDesc?->crawlerBackend;
                 }
 
-                // Headers anti-blocage enrichis (rotation UA, Accept-Language, Sec-Ch-Ua, etc.)
+                // Guzzle Pool configuré : utiliser les paramètres admin
+                if ($crawlerBackend === \Platform\Enum\CrawlerBackend::GuzzlePool
+                    || $crawlerBackend === null
+                    || $crawlerBackend === \Platform\Enum\CrawlerBackend::Auto) {
+                    $concurrence = $config->guzzlePoolConcurrence;
+                    $timeout = $config->guzzlePoolTimeout;
+                    $delaiMs = $config->guzzlePoolDelaiMs;
+                    $maxRedirections = $config->guzzlePoolMaxRedirections;
+                }
+
+                // Go service comme proxy si sélectionné
+                if ($crawlerBackend === \Platform\Enum\CrawlerBackend::Go
+                    && $config->crawlerGoServiceUrl !== '') {
+                    $proxy = $config->crawlerGoServiceUrl;
+                    $proxyAuth = '';
+                }
+
+                // Headers anti-blocage enrichis
                 $crawlerHeaders = class_exists(\Platform\Http\WebClient::class)
                     ? \Platform\Http\WebClient::construireHeadersCrawler()
                     : ['User-Agent' => $config->webUserAgent];
